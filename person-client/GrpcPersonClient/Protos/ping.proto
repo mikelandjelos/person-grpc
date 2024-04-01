@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option csharp_namespace = "GrpcPingClient";
+
+import "google/protobuf/empty.proto";
+package ping;
+
+service PingService {
+    rpc Ping(google.protobuf.Empty) returns (Response);
+}
+
+message Response {
+    string message = 1;
+}
