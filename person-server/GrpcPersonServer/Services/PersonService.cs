@@ -49,7 +49,7 @@ public class PersonService : GrpcPersonServer.PersonService.PersonServiceBase
     public override Task<CreatePersonResponse> CreatePerson(CreatePersonRequest request, ServerCallContext callContext)
     {
         _logger.LogInformation($"Peer: \"{callContext.Peer}\", Method: \"{callContext.Method}\"");
-        
+
         try
         {
             var person = request.Person.Clone();
@@ -158,7 +158,7 @@ public class PersonService : GrpcPersonServer.PersonService.PersonServiceBase
         try
         {
             var personToUpdate = people.Where(person => person.Id == request.Id).FirstOrDefault();
-            
+
             if (personToUpdate == null)
                 return Task.FromResult(new UpdatePersonResponse
                 {
@@ -168,7 +168,7 @@ public class PersonService : GrpcPersonServer.PersonService.PersonServiceBase
                         Status = (int)HttpStatusCode.NotFound,
                     }
                 });
-            
+
             if (request.HasName)
                 personToUpdate.Name = request.Name;
 
@@ -244,7 +244,7 @@ public class PersonService : GrpcPersonServer.PersonService.PersonServiceBase
                     Message = $"Internal server error occured!",
                     Status = (int)HttpStatusCode.InternalServerError,
                 }
-            });   
+            });
         }
     }
 

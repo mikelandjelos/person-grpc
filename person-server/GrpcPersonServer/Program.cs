@@ -6,9 +6,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddGrpc();
-builder.Services.AddGrpcReflection(); // Postman gets the proto file this way!
+builder.Services.AddGrpcReflection();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapGrpcReflectionService();
+}
 
 // Configure the HTTP request pipeline.
 app.MapGrpcService<PersonService>();
