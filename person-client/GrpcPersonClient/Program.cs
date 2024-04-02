@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.Client;
 using GrpcPersonClient;
 using GrpcPingClient;
@@ -74,3 +75,33 @@ Console.WriteLine("========================================================");
 
 var deletePersonResponse = await personClient.DeletePersonAsync(new DeletePersonRequest { Id = getPersonResponse.RetreivedPerson.Id });
 Console.WriteLine($"Deleted person with id: {deletePersonResponse.DeletedId}");
+
+// Delete people stream
+
+Console.WriteLine("========================================================");
+Console.WriteLine("Test 6: Delete Person");
+Console.WriteLine("========================================================");
+
+using (var deletePeopleStream = personClient.DeletePeople())
+{
+    while (true)
+    {
+        Console.Write("Enter an ID of a person you wish to delete: ");
+
+        int idToDelete;
+        if (!int.TryParse(Console.ReadLine(), out idToDelete))
+            Console.WriteLine("Invalid ID! Try again.");
+
+        await deletePeopleStream.RequestStream.WriteAsync(new DeletePersonRequest { Id = idToDelete });
+        await deletePeopleStream.ResponseStream.MoveNext();
+        
+        if (idToDelete == -1)
+        {
+            Console.WriteLine($"Finished. Message: \"{deletePeopleStream.ResponseStream.Current.Metadata.Message}\".");
+            break;
+        }
+            
+        Console.WriteLine($"Deleted: {deletePeopleStream.ResponseStream.Current.DeletedId}.\nMessage: \"{deletePeopleStream.ResponseStream.Current.Metadata.Message}\".");
+
+    }
+}

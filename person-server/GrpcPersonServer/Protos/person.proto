@@ -10,6 +10,9 @@ service PersonService {
   rpc GetPeople(GetPeopleRequest) returns (GetPeopleResponse);
   rpc UpdatePerson(UpdatePersonRequest) returns (UpdatePersonResponse);
   rpc DeletePerson(DeletePersonRequest) returns (DeletePersonResponse);
+  
+  // Bidirectional streaming
+  rpc DeletePeople(stream DeletePersonRequest) returns (stream DeletePersonResponse);
 }
 
 // Auxiliary types

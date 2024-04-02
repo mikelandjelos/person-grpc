@@ -44,8 +44,6 @@ public class PersonService : GrpcPersonServer.PersonService.PersonServiceBase
         _logger = logger;
     }
 
-    #region  Basic CRUD - Unary RPCs
-
     public override Task<CreatePersonResponse> CreatePerson(CreatePersonRequest request, ServerCallContext callContext)
     {
         _logger.LogInformation($"Peer: \"{callContext.Peer}\", Method: \"{callContext.Method}\"");
@@ -212,24 +210,26 @@ public class PersonService : GrpcPersonServer.PersonService.PersonServiceBase
 
         try
         {
-            if (request.Id >= people.Count || request.Id < 0)
+            var personToDelete = people.Find(person => person.Id == request.Id);
+
+            if (personToDelete == null)
                 return Task.FromResult(new DeletePersonResponse
                 {
                     Metadata = new ResponseMetadata
                     {
-                        Message = $"Id of {request.Id} is not valid! Id must be between 0 and {people.Count}!",
-                        Status = (int)HttpStatusCode.BadRequest,
+                        Message = $"Person with ID {request.Id} not found!",
+                        Status = (int)HttpStatusCode.OK,
                     },
                 });
 
-            people.RemoveAt(request.Id);
+            people.Remove(personToDelete);
 
             return Task.FromResult(new DeletePersonResponse
             {
                 DeletedId = request.Id,
                 Metadata = new ResponseMetadata
                 {
-                    Message = $"Deleted person with id {request.Id}!",
+                    Message = $"Deleted person with id {request.Id}! Current number of people: {people.Count}.",
                     Status = (int)HttpStatusCode.OK,
                 },
             });
@@ -248,9 +248,66 @@ public class PersonService : GrpcPersonServer.PersonService.PersonServiceBase
         }
     }
 
-    #endregion
+    public override async Task DeletePeople(IAsyncStreamReader<DeletePersonRequest> requestStream, IServerStreamWriter<DeletePersonResponse> responseStream, ServerCallContext callContext)
+    {
+        _logger.LogInformation($"Peer: \"{callContext.Peer}\", Method: \"{callContext.Method}\"");
 
-    #region Streaming RPCs
+        try
+        {
+            int deletedCount = 0;
+            while (true)
+            {
+                var nextAvailable = await requestStream.MoveNext();
+                
+                if (!nextAvailable)
+                    break;
 
-    #endregion
+                if (requestStream.Current.Id == -1)
+                {
+
+                    await responseStream.WriteAsync(new DeletePersonResponse
+                    {
+                        Metadata = new ResponseMetadata
+                        {
+                            Message = $"Finished deleting! Deleted count: {deletedCount}.",
+                            Status = (int)HttpStatusCode.OK,
+                        },
+                    });
+                    break;
+                }
+
+                var personToDelete = people.Find(person => person.Id == requestStream.Current.Id);
+
+                if (personToDelete == null)
+                {
+                    await responseStream.WriteAsync(new DeletePersonResponse
+                    {
+                        Metadata = new ResponseMetadata
+                        {
+                            Message = $"Person with ID {requestStream.Current.Id} not found!",
+                            Status = (int)HttpStatusCode.OK,
+                        },
+                    });
+                    continue;
+                }
+
+                people.Remove(personToDelete);
+
+                await responseStream.WriteAsync(new DeletePersonResponse
+                {
+                    DeletedId = requestStream.Current.Id,
+                    Metadata = new ResponseMetadata
+                    {
+                        Message = $"Deleted person with id {requestStream.Current.Id}! Current number of people: {people.Count}.",
+                        Status = (int)HttpStatusCode.OK,
+                    },
+                });
+                deletedCount++;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex.StackTrace);
+        }
+    }
 }
